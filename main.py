@@ -6,7 +6,9 @@ import os
 import sys
 import threading
 import tkinter as tk
+from collections.abc import Generator
 from tkinter import filedialog, messagebox, ttk
+from typing import Any
 
 sys.path.insert(0, "src")
 import theme
@@ -18,7 +20,7 @@ from views.largelist import LargeListView
 from views.treemap import TreemapView
 
 
-def _fmt(n):
+def _fmt(n: float) -> str:
     for u in ("B", "KB", "MB", "GB"):
         if n < 1024:
             return f"{n:.1f} {u}"
@@ -65,23 +67,23 @@ def _is_under_safe_root(path: str, safe_roots: list[str]) -> bool:
 
 
 class App(tk.Tk):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.title("DiskLens")
         self.geometry("1100x700")
         self.minsize(800, 500)
-        
+
         # Load icon relative to this file
         icon_path = os.path.join(os.path.dirname(__file__), "assets", "icon.png")
         if os.path.exists(icon_path):
             self.iconphoto(False, tk.PhotoImage(file=icon_path))
-            
-        self._path = None
-        self._data = None
+
+        self._path: str | None = None
+        self._data: dict[str, Any] | None = None
         self._safe_roots = _safe_roots()
         self._build()
 
-    def _build(self):
+    def _build(self) -> None:
         # --- toolbar ---
         bar = ttk.Frame(self, padding=theme.TOOLBAR_PADDING)
         bar.pack(fill="x")
@@ -118,18 +120,18 @@ class App(tk.Tk):
             padx=theme.PAD_NORMAL,
             pady=theme.NOTEBOOK_PADDING[1],
         )
-        self._tm = TreemapView(nb)
-        self._bc = BarChartView(nb)
-        self._tc = TypeChartView(nb)
-        self._dl = DupListView(nb)
-        self._ll = LargeListView(nb)
+        self._tm = TreemapView(nb)  # type: ignore[no-untyped-call]
+        self._bc = BarChartView(nb)  # type: ignore[no-untyped-call]
+        self._tc = TypeChartView(nb)  # type: ignore[no-untyped-call]
+        self._dl = DupListView(nb)  # type: ignore[no-untyped-call]
+        self._ll = LargeListView(nb)  # type: ignore[no-untyped-call]
         nb.add(self._tm, text="  Treemap  ")
         nb.add(self._bc, text="  Top folders  ")
         nb.add(self._tc, text="  File types  ")
         nb.add(self._dl, text="  Duplicates  ")
         nb.add(self._ll, text="  Largest files  ")
 
-    def _browse(self):
+    def _browse(self) -> None:
         # Open the file dialog starting inside the first safe root
         start = self._safe_roots[0] if self._safe_roots else os.path.expanduser("~")
         d = filedialog.askdirectory(title="Select folder to analyse", initialdir=start)
@@ -162,19 +164,24 @@ class App(tk.Tk):
             return False
         return True
 
-    def _scan(self):
+    def _scan(self) -> None:
         if not self._validate():
             return
         self._sv.set("Scanning...")
         self.update_idletasks()
 
-        def run():
+        def run() -> None:
+            assert self._path is not None
+
+            def progress_cb(p: str) -> None:
+                self._sv.set(f"  {p[-70:]}")
+
             node = scan(
                 self._path,
-                progress_cb=lambda p: self._sv.set(f"  {p[-70:]}"),
+                progress_cb=progress_cb,
             )
 
-            def td(n):
+            def td(n: Any) -> dict[str, Any]:
                 return {
                     "label": n.name,
                     "size": n.size,
@@ -182,7 +189,7 @@ class App(tk.Tk):
                     "children": [td(c) for c in n.children if c.is_dir],
                 }
 
-            def af(n):
+            def af(n: Any) -> Generator[dict[str, Any], None, None]:
                 if not n.is_dir:
                     yield {"path": n.path, "size": n.size}
                 for c in n.children:
@@ -193,31 +200,43 @@ class App(tk.Tk):
 
         threading.Thread(target=run, daemon=True).start()
 
-    def _done(self):
+    def _done(self) -> None:
+        assert self._data is not None
         ch = self._data["root"]["children"]
-        self._tm.load(ch)
-        self._bc.load(ch)
+        self._tm.load(ch)  # type: ignore[no-untyped-call]
+        self._bc.load(ch)  # type: ignore[no-untyped-call]
         self._tc.load(self._data["files"])
         self._ll.load(self._data["files"])
-        total = self._data["root"]["size"]
+        total = float(self._data["root"]["size"])
         count = len(self._data["files"])
         self._sv.set(f"Done - {_fmt(total)} across {count} files")
 
-    def _dups(self):
+    def _dups(self) -> None:
         if not self._validate():
             return
         self._sv.set("Finding duplicates...")
         self.update_idletasks()
 
-        def run():
+        def run() -> None:
+            assert self._path is not None
+
+            def progress_cb(p: str) -> None:
+                self._sv.set(f"  checking {p[-60:]}")
+
             groups = find_duplicates(
                 self._path,
-                progress_cb=lambda p: self._sv.set(f"  checking {p[-60:]}"),
+                progress_cb=progress_cb,
             )
-            self.after(0, lambda: self._dl.load(groups))
-            self.after(
-                0, lambda: self._sv.set(f"Done - {len(groups)} duplicate groups found")
-            )
+
+            def load_done() -> None:
+                self._dl.load(groups)
+
+            self.after(0, load_done)
+
+            def set_done() -> None:
+                self._sv.set(f"Done - {len(groups)} duplicate groups found")
+
+            self.after(0, set_done)
 
         threading.Thread(target=run, daemon=True).start()
 

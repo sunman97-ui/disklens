@@ -1,6 +1,6 @@
 # 🔍 DiskLens
 
-[![CI](https://github.com/sunman97/disklens/actions/workflows/ci.yml/badge.svg)](https://github.com/sunman97/disklens/actions)
+[![CI](https://github.com/sunman97/disklens/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sunman97/disklens/actions)
 [![Release](https://img.shields.io/github/v/release/sunman97/disklens)](https://github.com/sunman97/disklens/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)

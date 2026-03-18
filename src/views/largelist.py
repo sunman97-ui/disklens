@@ -5,12 +5,13 @@ import os
 import tkinter as tk
 from datetime import datetime
 from tkinter import messagebox, ttk
+from typing import Any
 
 import theme
 from actions import delete_to_trash
 
 
-def _fmt(n):
+def _fmt(n: float) -> str:
     for u in ("B", "KB", "MB", "GB"):
         if n < 1024:
             return f"{n:.1f} {u}"
@@ -71,7 +72,7 @@ class LargeListView(ttk.Frame):
     def _on_canvas_configure(self, e):
         self._canvas.itemconfig(self._win_id, width=e.width)
 
-    def load(self, file_list: list[dict], top_n: int = 20) -> None:
+    def load(self, file_list: list[dict[str, Any]], top_n: int = 20) -> None:
         for w in self._inner.winfo_children():
             w.destroy()
         self._checks.clear()
@@ -114,10 +115,10 @@ class LargeListView(ttk.Frame):
             fname = os.path.basename(f["path"])
             lbl = ttk.Label(row, text=fname, anchor="w", cursor="hand2")
             lbl.pack(side="left", fill="x", expand=True)
-            lbl.bind("<Button-1>", lambda e, v=var: v.set(not v.get()))
+            lbl.bind("<Button-1>", lambda e, v=var: v.set(not v.get()))  # type: ignore[misc]
 
             tip = f["path"]
-            lbl.bind("<Enter>", lambda e, t=tip: self._sv.set(t))
+            lbl.bind("<Enter>", lambda e, t=tip: self._sv.set(t))  # type: ignore[misc]
             lbl.bind("<Leave>", lambda e: self._sv.set(self._status_text()))
 
             ttk.Label(
@@ -175,10 +176,6 @@ class LargeListView(ttk.Frame):
         self._rebuild_rows()
         if errs:
             messagebox.showerror("Some files could not be deleted", "\n".join(errs))
-
-    def _rebuild_rows(self):
-        self._checks = {p: v for p, v in self._checks.items() if os.path.exists(p)}
-        self._sv.set(self._status_text())
 
     def _rebuild_rows(self):
         self._checks = {p: v for p, v in self._checks.items() if os.path.exists(p)}
