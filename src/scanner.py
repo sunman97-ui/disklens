@@ -1,4 +1,4 @@
-﻿"""scanner.py - fast recursive directory scanner with Windows safety guards.
+r"""scanner.py - fast recursive directory scanner with Windows safety guards.
 
 Safety rules applied before entering any directory or reading any file:
   - Blocked root paths: Windows, System32, SysWOW64, WinSxS, boot, Recovery,
@@ -9,60 +9,63 @@ Safety rules applied before entering any directory or reading any file:
   - PermissionError and OSError are silently skipped.
   - Files are never opened -- only stat() is called.
 """
+
 from __future__ import annotations
+
 import os
 import threading
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Optional
-
 
 # ---------------------------------------------------------------------------
 # Safety blocklist
 # ---------------------------------------------------------------------------
 
 # Exact directory names (case-insensitive) that should never be entered.
-_BLOCKED_NAMES: frozenset[str] = frozenset({
-    # Core Windows OS
-    "windows",
-    "system32",
-    "syswow64",
-    "sysnative",
-    "winsxs",
-    "servicing",
-    "panther",
-    # Boot / recovery
-    "boot",
-    "recovery",
-    "efi",
-    "$recycle.bin",
-    "recycler",
-    "system volume information",
-    # Driver stores
-    "driverstore",
-    "drivers",
-    # Virtual memory / hibernate (files, but block as names too)
-    "pagefile.sys",
-    "hiberfil.sys",
-    "swapfile.sys",
-    # MS telemetry / update internals
-    "softwaredistribution",
-    "catroot",
-    "catroot2",
-    # ProgramData sub-paths that are risky
-    "microsoft",       # only blocks under ProgramData -- see path-segment check
-    # Virtualisation
-    "wsl",
-    "lxss",
-})
+_BLOCKED_NAMES: frozenset[str] = frozenset(
+    {
+        # Core Windows OS
+        "windows",
+        "system32",
+        "syswow64",
+        "sysnative",
+        "winsxs",
+        "servicing",
+        "panther",
+        # Boot / recovery
+        "boot",
+        "recovery",
+        "efi",
+        "$recycle.bin",
+        "recycler",
+        "system volume information",
+        # Driver stores
+        "driverstore",
+        "drivers",
+        # Virtual memory / hibernate (files, but block as names too)
+        "pagefile.sys",
+        "hiberfil.sys",
+        "swapfile.sys",
+        # MS telemetry / update internals
+        "softwaredistribution",
+        "catroot",
+        "catroot2",
+        # ProgramData sub-paths that are risky
+        "microsoft",  # only blocks under ProgramData -- see path-segment check
+        # Virtualisation
+        "wsl",
+        "lxss",
+    }
+)
 
 # If any of these strings appear anywhere in the normalised path, skip it.
 # Use lowercase path segments.
 _BLOCKED_PATH_SEGMENTS: tuple[str, ...] = (
     r"\windows" + os.sep,
     r"\windows\\",
-    "/windows/",
+    r"/windows/",
     "system32",
     "syswow64",
     "winsxs",
@@ -71,23 +74,25 @@ _BLOCKED_PATH_SEGMENTS: tuple[str, ...] = (
     "pagefile.sys",
     "hiberfil.sys",
     "swapfile.sys",
-    "\\boot\\",
-    "/boot/",
+    r"\boot" + os.sep,
+    r"/boot/",
 )
 
 # Files at the root of a drive that should never be touched.
-_BLOCKED_ROOT_FILES: frozenset[str] = frozenset({
-    "pagefile.sys",
-    "hiberfil.sys",
-    "swapfile.sys",
-    "bootmgr",
-    "bootnxt",
-    "ntldr",
-    "io.sys",
-    "msdos.sys",
-    "config.sys",
-    "autoexec.bat",
-})
+_BLOCKED_ROOT_FILES: frozenset[str] = frozenset(
+    {
+        "pagefile.sys",
+        "hiberfil.sys",
+        "swapfile.sys",
+        "bootmgr",
+        "bootnxt",
+        "ntldr",
+        "io.sys",
+        "msdos.sys",
+        "config.sys",
+        "autoexec.bat",
+    }
+)
 
 
 def _is_blocked_name(name: str) -> bool:
@@ -109,9 +114,7 @@ def _is_safe_entry(entry: os.DirEntry, root: str) -> bool:
         if _is_blocked_name(entry.name):
             return False
         # Check full path for blocked segments
-        if _is_blocked_path(entry.path):
-            return False
-        return True
+        return not _is_blocked_path(entry.path)
     except OSError:
         return False
 
@@ -120,12 +123,13 @@ def _is_safe_entry(entry: os.DirEntry, root: str) -> bool:
 # Data model
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class FileNode:
     path: str
     size: int
     is_dir: bool
-    children: list["FileNode"] = field(default_factory=list)
+    children: list[FileNode] = field(default_factory=list)
 
     @property
     def name(self) -> str:
@@ -136,10 +140,11 @@ class FileNode:
 # Scanner
 # ---------------------------------------------------------------------------
 
+
 def scan(
     root: str,
-    progress_cb: Optional[Callable[[str], None]] = None,
-    cancel_event: Optional[threading.Event] = None,
+    progress_cb: Callable[[str], None] | None = None,
+    cancel_event: threading.Event | None = None,
 ) -> FileNode:
     """
     Scan *root* and return a FileNode tree.
@@ -177,8 +182,10 @@ def scan(
                 else:
                     sz = e.stat().st_size
                     # Skip root-level system files by name
-                    if os.path.dirname(e.path) == root and \
-                       e.name.lower() in _BLOCKED_ROOT_FILES:
+                    if (
+                        os.path.dirname(e.path) == root
+                        and e.name.lower() in _BLOCKED_ROOT_FILES
+                    ):
                         continue
                     child = FileNode(path=e.path, size=sz, is_dir=False)
                     node.children.append(child)

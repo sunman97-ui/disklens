@@ -1,22 +1,27 @@
-﻿"""main.py - DiskLens.  Run: python main.py"""
+"""main.py - DiskLens.  Run: python main.py"""
+
 from __future__ import annotations
-import os, sys, threading
+
+import os
+import sys
+import threading
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import filedialog, messagebox, ttk
 
 sys.path.insert(0, "src")
-from scanner import scan
-from duplicates import find_duplicates
 import theme
-from views.treemap import TreemapView
+from duplicates import find_duplicates
+from scanner import scan
 from views.charts import BarChartView, TypeChartView
 from views.duplist import DupListView
 from views.largelist import LargeListView
+from views.treemap import TreemapView
 
 
 def _fmt(n):
     for u in ("B", "KB", "MB", "GB"):
-        if n < 1024: return f"{n:.1f} {u}"
+        if n < 1024:
+            return f"{n:.1f} {u}"
         n /= 1024
     return f"{n:.1f} TB"
 
@@ -24,6 +29,7 @@ def _fmt(n):
 # ---------------------------------------------------------------------------
 # Safe-root enforcement
 # ---------------------------------------------------------------------------
+
 
 def _safe_roots() -> list[str]:
     """Return normalised absolute paths of user folders that are safe to scan."""
@@ -38,7 +44,7 @@ def _safe_roots() -> list[str]:
         os.path.join(home, "OneDrive"),
         os.path.join(home, "Dropbox"),
         os.path.join(home, "Google Drive"),
-        os.path.join(home, "software")
+        os.path.join(home, "software"),
     ]
     # Only include folders that actually exist on this machine
     return [os.path.normpath(p) for p in candidates if os.path.isdir(p)]
@@ -57,10 +63,19 @@ def _is_under_safe_root(path: str, safe_roots: list[str]) -> bool:
 # App
 # ---------------------------------------------------------------------------
 
+
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("DiskLens"); self.geometry("1100x700"); self.minsize(800, 500)
+        self.title("DiskLens")
+        self.geometry("1100x700")
+        self.minsize(800, 500)
+        
+        # Load icon relative to this file
+        icon_path = os.path.join(os.path.dirname(__file__), "assets", "icon.png")
+        if os.path.exists(icon_path):
+            self.iconphoto(False, tk.PhotoImage(file=icon_path))
+            
         self._path = None
         self._data = None
         self._safe_roots = _safe_roots()
@@ -68,17 +83,25 @@ class App(tk.Tk):
 
     def _build(self):
         # --- toolbar ---
-        bar = ttk.Frame(self, padding=theme.TOOLBAR_PADDING); bar.pack(fill="x")
+        bar = ttk.Frame(self, padding=theme.TOOLBAR_PADDING)
+        bar.pack(fill="x")
         self._pv = tk.StringVar(value="No folder selected")
         ttk.Label(bar, textvariable=self._pv, width=52).pack(side="left")
-        ttk.Button(bar, text="Browse...",       command=self._browse).pack(side="left", padx=theme.PAD_SMALL)
-        ttk.Button(bar, text="Scan",            command=self._scan).pack(side="left")
-        ttk.Button(bar, text="Find duplicates", command=self._dups).pack(side="left", padx=theme.PAD_NORMAL)
+        ttk.Button(bar, text="Browse...", command=self._browse).pack(
+            side="left", padx=theme.PAD_SMALL
+        )
+        ttk.Button(bar, text="Scan", command=self._scan).pack(side="left")
+        ttk.Button(bar, text="Find duplicates", command=self._dups).pack(
+            side="left", padx=theme.PAD_NORMAL
+        )
         self._sv = tk.StringVar(value="Ready.")
-        ttk.Label(bar, textvariable=self._sv, foreground=theme.COLOR_GRAY).pack(side="right", padx=theme.PAD_NORMAL)
+        ttk.Label(bar, textvariable=self._sv, foreground=theme.COLOR_GRAY).pack(
+            side="right", padx=theme.PAD_NORMAL
+        )
 
         # --- safe roots hint bar ---
-        hint = ttk.Frame(self, padding=theme.HINT_BAR_PADDING); hint.pack(fill="x")
+        hint = ttk.Frame(self, padding=theme.HINT_BAR_PADDING)
+        hint.pack(fill="x")
         roots_str = "  |  ".join(os.path.basename(r) for r in self._safe_roots)
         ttk.Label(
             hint,
@@ -88,9 +111,17 @@ class App(tk.Tk):
         ).pack(side="left")
 
         # --- notebook ---
-        nb = ttk.Notebook(self); nb.pack(fill="both", expand=True, padx=theme.PAD_NORMAL, pady=theme.NOTEBOOK_PADDING[1])
-        self._tm = TreemapView(nb);   self._bc = BarChartView(nb)
-        self._tc = TypeChartView(nb); self._dl = DupListView(nb)
+        nb = ttk.Notebook(self)
+        nb.pack(
+            fill="both",
+            expand=True,
+            padx=theme.PAD_NORMAL,
+            pady=theme.NOTEBOOK_PADDING[1],
+        )
+        self._tm = TreemapView(nb)
+        self._bc = BarChartView(nb)
+        self._tc = TypeChartView(nb)
+        self._dl = DupListView(nb)
         self._ll = LargeListView(nb)
         nb.add(self._tm, text="  Treemap  ")
         nb.add(self._bc, text="  Top folders  ")
@@ -113,7 +144,7 @@ class App(tk.Tk):
                 "Folder not allowed",
                 f"'{d}' is outside the safe scan area.\n\n"
                 f"DiskLens only scans within:\n{safe_list}\n\n"
-                "This protects your system files from being accidentally modified."
+                "This protects your system files from being accidentally modified.",
             )
             return
 
@@ -125,14 +156,17 @@ class App(tk.Tk):
             messagebox.showinfo("DiskLens", "Please select a folder first.")
             return False
         if not _is_under_safe_root(self._path, self._safe_roots):
-            messagebox.showerror("Folder not allowed",
-                                 "The selected path is outside the safe scan area.")
+            messagebox.showerror(
+                "Folder not allowed", "The selected path is outside the safe scan area."
+            )
             return False
         return True
 
     def _scan(self):
-        if not self._validate(): return
-        self._sv.set("Scanning..."); self.update_idletasks()
+        if not self._validate():
+            return
+        self._sv.set("Scanning...")
+        self.update_idletasks()
 
         def run():
             node = scan(
@@ -142,13 +176,17 @@ class App(tk.Tk):
 
             def td(n):
                 return {
-                    "label": n.name, "size": n.size, "path": n.path,
+                    "label": n.name,
+                    "size": n.size,
+                    "path": n.path,
                     "children": [td(c) for c in n.children if c.is_dir],
                 }
 
             def af(n):
-                if not n.is_dir: yield {"path": n.path, "size": n.size}
-                for c in n.children: yield from af(c)
+                if not n.is_dir:
+                    yield {"path": n.path, "size": n.size}
+                for c in n.children:
+                    yield from af(c)
 
             self._data = {"root": td(node), "files": list(af(node))}
             self.after(0, self._done)
@@ -166,8 +204,10 @@ class App(tk.Tk):
         self._sv.set(f"Done - {_fmt(total)} across {count} files")
 
     def _dups(self):
-        if not self._validate(): return
-        self._sv.set("Finding duplicates..."); self.update_idletasks()
+        if not self._validate():
+            return
+        self._sv.set("Finding duplicates...")
+        self.update_idletasks()
 
         def run():
             groups = find_duplicates(
@@ -175,8 +215,9 @@ class App(tk.Tk):
                 progress_cb=lambda p: self._sv.set(f"  checking {p[-60:]}"),
             )
             self.after(0, lambda: self._dl.load(groups))
-            self.after(0, lambda: self._sv.set(
-                f"Done - {len(groups)} duplicate groups found"))
+            self.after(
+                0, lambda: self._sv.set(f"Done - {len(groups)} duplicate groups found")
+            )
 
         threading.Thread(target=run, daemon=True).start()
 

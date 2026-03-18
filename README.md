@@ -1,8 +1,14 @@
 # 🔍 DiskLens
 
+[![CI](https://github.com/sunman97/disklens/actions/workflows/ci.yml/badge.svg)](https://github.com/sunman97/disklens/actions)
+[![Release](https://img.shields.io/github/v/release/sunman97/disklens)](https://github.com/sunman97/disklens/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Platform: Windows](https://img.shields.io/badge/platform-Windows-lightgrey.svg)](#)
+
+<p align="center">
+  <img src="assets/screenshot.png" alt="DiskLens Screenshot" width="600">
+</p>
 
 **DiskLens** is a high-performance disk space analyzer and cleanup utility built with Python and Tkinter. It provides a visual deep-dive into your storage, allowing you to identify space-hogging folders, locate duplicate copies of files, and safely reclaim space by sending unwanted items to the system Recycle Bin.
 
@@ -23,43 +29,53 @@
 ### Prerequisites
 
 *   **Python 3.10+** (Ensure Python is added to your PATH).
-*   **Windows OS** (Primary platform for `run.ps1` and Windows-specific safety guards).
+*   **Windows OS** (Primary platform for Windows-specific safety guards).
 
-### Installation & First Run
-
-Before running DiskLens for the first time, you must set up your virtual environment and install dependencies:
+### Installation
 
 1.  **Clone the repository**:
     ```bash
-    git clone https://github.com/sunman97-ui/disklens.git
+    git clone https://github.com/sunman97/disklens.git
     cd disklens
     ```
 
-2.  **Create a virtual environment**:
-    ```powershell
-    # Using the 'py' launcher (recommended for Windows)
-    py -m venv .venv
-
-    # OR using standard python command
+2.  **Install the package**:
+    ```bash
+    # It is recommended to use a virtual environment
     python -m venv .venv
-    ```
-
-3.  **Activate and Install**:
-    ```powershell
     .venv\Scripts\activate
-    pip install -r requirements.txt
+    pip install .
     ```
 
-### Subsequent Runs
+### Running DiskLens
 
-After the initial setup, you have two ways to launch DiskLens:
+After installation, you can launch the application:
+```bash
+python main.py
+```
+Or use the provided PowerShell helper:
+```powershell
+./run.ps1
+```
 
-*   **Recommended (One-click)**: Right-click `run.ps1` and select **Run with PowerShell**. This automatically uses the virtual environment's Python interpreter.
-*   **Manual**:
-    ```powershell
-    .venv\Scripts\activate
-    python main.py
-    ```
+---
+
+## 🛠️ Development
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for detailed setup instructions.
+
+### Quick Start for Developers
+```bash
+# Install with dev dependencies
+pip install -e .[dev]
+
+# Run tests
+pytest
+
+# Lint and Format
+ruff check . --fix
+ruff format .
+```
 
 ---
 
@@ -69,49 +85,20 @@ After the initial setup, you have two ways to launch DiskLens:
 DiskLens enforces a **"Safe Scan Area"** policy. By default, it will only allow scanning within specific user directories (e.g., `Downloads`, `Documents`, `Desktop`, `Pictures`, `software`). 
 
 **Note for Developers/Power Users**:
-If you need to scan custom locations, these must be added to the `_safe_roots()` function in `main.py` on a per-user basis. This protection ensures that critical system directories are never accidentally modified or deleted.
+If you need to scan custom locations, these must be added to the `_safe_roots()` function in `main.py` on a per-user basis.
 
 ### Blocklist & Guards
-The scanner (`src/scanner.py`) includes a hardcoded blocklist of system-critical paths:
-*   `C:\Windows`
-*   `C:\ProgramData\Microsoft`
-*   `System Volume Information`
-*   Root-level system files (e.g., `pagefile.sys`, `ntldr`)
-*   **Reparse Points**: Symbolic links and junctions are never followed to prevent infinite loops.
+The scanner includes a hardcoded blocklist of system-critical paths like `C:\Windows` and `C:\ProgramData\Microsoft`. Reparse points (symbolic links and junctions) are never followed to prevent infinite loops.
+
+For security vulnerabilities, please see our [Security Policy](SECURITY.md).
 
 ---
 
 ## 🏗️ Technical Architecture
 
-DiskLens is designed for speed, safety, and maintainability. Here is how the core components interact:
-
-### 1. Multi-threaded Scanner (`src/scanner.py`)
-The scanner uses a `ThreadPoolExecutor` to perform parallel directory traversal. It utilizes `os.scandir()` for high-performance file discovery and applies safety filters *before* descending into any directory or calling `stat()` on a file.
-
-### 2. Smart Duplicate Identification (`src/duplicates.py`)
-Instead of heavy file hashing, DiskLens uses regex-based normalisation to identify duplicates in the same directory. It identifies Windows-style copy patterns like `filename (1).ext` or `filename - Copy.ext` and groups them with the original file.
-
-### 3. Centralised Service Layer (`src/actions.py`)
-File system modifications (like deletion) are isolated from the UI views. All deletion requests pass through a centralised `actions.py` service, which handles path normalisation and error reporting.
-
-### 4. Unified Styling (`src/theme.py`)
-Visual consistency is managed through a central theme module. All fonts, colors, and layout constants are defined in one place, allowing for easy UI adjustments and potential future theming.
-
-### 5. Visualisation Layer (`src/views/`)
-*   **Treemap**: Uses the `squarify` algorithm to map file sizes to visual area.
-*   **Charts**: Leverages `matplotlib` for generating high-quality bar and pie charts of your data.
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Whether it's a bug fix, a new feature (like cloud storage scanning), or improved UI styling, please feel free to open a Pull Request.
-
-1.  Fork the Project
-2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4.  Push to the Branch (`git push origin feature/AmazingFeature`)
-5.  Open a Pull Request
+- **Multi-threaded Scanner**: Parallel traversal using `ThreadPoolExecutor`.
+- **Centralised Service Layer**: All file operations are isolated in `src/actions.py`.
+- **Unified Styling**: Centralised theme management in `src/theme.py`.
 
 ---
 

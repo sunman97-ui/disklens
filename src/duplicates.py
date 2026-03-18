@@ -1,4 +1,4 @@
-﻿"""duplicates.py - find duplicates by normalised filename within the same folder.
+"""duplicates.py - find duplicates by normalised filename within the same folder.
 
 Rules:
   - Files must be in the same parent directory.
@@ -10,12 +10,13 @@ This means:
   downloads/report.pdf  +  downloads/sub/report.pdf   -> NOT duplicates (different dir)
   project/__init__.py   +  project/api/__init__.py    -> NOT duplicates (different dir)
 """
+
 from __future__ import annotations
+
 import os
 import re
 from collections import defaultdict
-from typing import Callable, Optional
-
+from collections.abc import Callable
 
 _COPY_RE = re.compile(
     r"""
@@ -40,7 +41,7 @@ def _normalise(filename: str) -> str:
 
 def find_duplicates(
     root: str,
-    progress_cb: Optional[Callable[[str], None]] = None,
+    progress_cb: Callable[[str], None] | None = None,
 ) -> list[list[str]]:
     """
     Return groups of duplicate files.
