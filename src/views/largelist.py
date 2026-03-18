@@ -4,7 +4,8 @@ import os
 from datetime import datetime
 import tkinter as tk
 from tkinter import ttk, messagebox
-import send2trash
+from actions import delete_to_trash
+import theme
 
 def _fmt(n):
     for u in ("B","KB","MB","GB"):
@@ -24,14 +25,14 @@ class LargeListView(ttk.Frame):
         super().__init__(parent, **kw)
         self._checks: dict[str, tk.BooleanVar] = {}
 
-        tb = ttk.Frame(self); tb.pack(fill="x", padx=6, pady=6)
+        tb = ttk.Frame(self); tb.pack(fill="x", padx=theme.PAD_NORMAL, pady=theme.PAD_NORMAL)
         ttk.Button(tb, text="Select all",  command=self._sel_all).pack(side="left")
-        ttk.Button(tb, text="Select none", command=self._sel_none).pack(side="left", padx=4)
-        ttk.Separator(tb, orient="vertical").pack(side="left", fill="y", padx=6)
+        ttk.Button(tb, text="Select none", command=self._sel_none).pack(side="left", padx=theme.PAD_SMALL)
+        ttk.Separator(tb, orient="vertical").pack(side="left", fill="y", padx=theme.PAD_NORMAL)
         ttk.Button(tb, text="Delete selected (Recycle Bin)",
                    command=self._delete).pack(side="left")
         self._sv = tk.StringVar(value="Run a scan first.")
-        ttk.Label(tb, textvariable=self._sv).pack(side="right", padx=8)
+        ttk.Label(tb, textvariable=self._sv).pack(side="right", padx=theme.PAD_NORMAL)
 
         outer = ttk.Frame(self); outer.pack(fill="both", expand=True)
         self._canvas = tk.Canvas(outer, highlightthickness=0)
@@ -60,25 +61,25 @@ class LargeListView(ttk.Frame):
         top = sorted(file_list, key=lambda f: f["size"], reverse=True)[:top_n]
 
         # header
-        hdr = ttk.Frame(self._inner); hdr.pack(fill="x", padx=8, pady=(4,0))
+        hdr = ttk.Frame(self._inner); hdr.pack(fill="x", padx=theme.PAD_NORMAL, pady=(theme.PAD_SMALL, 0))
         ttk.Label(hdr, text="", width=3).pack(side="left")
-        ttk.Label(hdr, text="File", font=("Segoe UI",9,"bold"),
+        ttk.Label(hdr, text="File", font=theme.FONT_BOLD,
                   anchor="w").pack(side="left", fill="x", expand=True)
-        ttk.Label(hdr, text="Date modified", font=("Segoe UI",9,"bold"),
-                  width=16, anchor="center").pack(side="right", padx=(0,4))
-        ttk.Label(hdr, text="Size", font=("Segoe UI",9,"bold"),
-                  width=10, anchor="e").pack(side="right", padx=(0,8))
-        ttk.Separator(self._inner, orient="horizontal").pack(fill="x", padx=8, pady=2)
+        ttk.Label(hdr, text="Date modified", font=theme.FONT_BOLD,
+                  width=16, anchor="center").pack(side="right", padx=(0, theme.PAD_SMALL))
+        ttk.Label(hdr, text="Size", font=theme.FONT_BOLD,
+                  width=10, anchor="e").pack(side="right", padx=(0, theme.PAD_NORMAL))
+        ttk.Separator(self._inner, orient="horizontal").pack(fill="x", padx=theme.PAD_NORMAL, pady=2)
 
         for i, f in enumerate(top):
-            row = ttk.Frame(self._inner); row.pack(fill="x", padx=8, pady=1)
+            row = ttk.Frame(self._inner); row.pack(fill="x", padx=theme.PAD_NORMAL, pady=1)
 
             var = tk.BooleanVar(value=False)
             self._checks[f["path"]] = var
 
             ttk.Checkbutton(row, variable=var).pack(side="left")
             ttk.Label(row, text=f"#{i+1}", width=3,
-                      foreground="gray", font=("Segoe UI",8)).pack(side="left")
+                      foreground=theme.COLOR_GRAY, font=theme.FONT_HINT).pack(side="left")
 
             fname = os.path.basename(f["path"])
             lbl = ttk.Label(row, text=fname, anchor="w", cursor="hand2")
@@ -90,7 +91,7 @@ class LargeListView(ttk.Frame):
             lbl.bind("<Leave>", lambda e: self._sv.set(self._status_text()))
 
             ttk.Label(row, text=_date(f["path"]), width=16,
-                      anchor="center", foreground="#666").pack(side="right", padx=(0,4))
+                      anchor="center", foreground=theme.COLOR_TEXT_DIM).pack(side="right", padx=(0, theme.PAD_SMALL))
             ttk.Label(row, text=_fmt(f["size"]), width=10,
                       anchor="e", foreground="#555").pack(side="right")
 
@@ -123,13 +124,18 @@ class LargeListView(ttk.Frame):
         ): return
         errs = []
         for p in paths:
-            try:
-                send2trash.send2trash(p)
+            success, msg = delete_to_trash(p)
+            if success:
                 del self._checks[p]
-            except Exception as e:
-                errs.append(f"{os.path.basename(p)}: {e}")
+            else:
+                errs.append(f"{os.path.basename(p)}: {msg}")
         self._rebuild_rows()
         if errs: messagebox.showerror("Some files could not be deleted", "\n".join(errs))
+
+    def _rebuild_rows(self):
+        self._checks = {p: v for p, v in self._checks.items() if os.path.exists(p)}
+        self._sv.set(self._status_text())
+
 
     def _rebuild_rows(self):
         self._checks = {p: v for p, v in self._checks.items() if os.path.exists(p)}

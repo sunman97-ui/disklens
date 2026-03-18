@@ -7,6 +7,7 @@ from tkinter import ttk, filedialog, messagebox
 sys.path.insert(0, "src")
 from scanner import scan
 from duplicates import find_duplicates
+import theme
 from views.treemap import TreemapView
 from views.charts import BarChartView, TypeChartView
 from views.duplist import DupListView
@@ -67,27 +68,27 @@ class App(tk.Tk):
 
     def _build(self):
         # --- toolbar ---
-        bar = ttk.Frame(self, padding=(8, 6)); bar.pack(fill="x")
+        bar = ttk.Frame(self, padding=theme.TOOLBAR_PADDING); bar.pack(fill="x")
         self._pv = tk.StringVar(value="No folder selected")
         ttk.Label(bar, textvariable=self._pv, width=52).pack(side="left")
-        ttk.Button(bar, text="Browse...",       command=self._browse).pack(side="left", padx=4)
+        ttk.Button(bar, text="Browse...",       command=self._browse).pack(side="left", padx=theme.PAD_SMALL)
         ttk.Button(bar, text="Scan",            command=self._scan).pack(side="left")
-        ttk.Button(bar, text="Find duplicates", command=self._dups).pack(side="left", padx=8)
+        ttk.Button(bar, text="Find duplicates", command=self._dups).pack(side="left", padx=theme.PAD_NORMAL)
         self._sv = tk.StringVar(value="Ready.")
-        ttk.Label(bar, textvariable=self._sv, foreground="gray").pack(side="right", padx=8)
+        ttk.Label(bar, textvariable=self._sv, foreground=theme.COLOR_GRAY).pack(side="right", padx=theme.PAD_NORMAL)
 
         # --- safe roots hint bar ---
-        hint = ttk.Frame(self, padding=(8, 0)); hint.pack(fill="x")
+        hint = ttk.Frame(self, padding=theme.HINT_BAR_PADDING); hint.pack(fill="x")
         roots_str = "  |  ".join(os.path.basename(r) for r in self._safe_roots)
         ttk.Label(
             hint,
             text=f"Safe scan folders: {roots_str}",
-            foreground="gray",
-            font=("Segoe UI", 8),
+            foreground=theme.COLOR_GRAY,
+            font=theme.FONT_HINT,
         ).pack(side="left")
 
         # --- notebook ---
-        nb = ttk.Notebook(self); nb.pack(fill="both", expand=True, padx=8, pady=(4, 8))
+        nb = ttk.Notebook(self); nb.pack(fill="both", expand=True, padx=theme.PAD_NORMAL, pady=theme.NOTEBOOK_PADDING[1])
         self._tm = TreemapView(nb);   self._bc = BarChartView(nb)
         self._tc = TypeChartView(nb); self._dl = DupListView(nb)
         self._ll = LargeListView(nb)

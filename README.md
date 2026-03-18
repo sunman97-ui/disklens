@@ -4,7 +4,7 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Platform: Windows](https://img.shields.io/badge/platform-Windows-lightgrey.svg)](#)
 
-**DiskLens** is a high-performance disk space analyzer and cleanup utility built with Python and Tkinter. It provides a visual deep-dive into your storage, allowing you to identify space-hogging folders, locate duplicate files, and safely reclaim space by sending unwanted items to the system Recycle Bin.
+**DiskLens** is a high-performance disk space analyzer and cleanup utility built with Python and Tkinter. It provides a visual deep-dive into your storage, allowing you to identify space-hogging folders, locate duplicate copies of files, and safely reclaim space by sending unwanted items to the system Recycle Bin.
 
 ---
 
@@ -12,7 +12,7 @@
 
 *   **📊 Interactive Treemap**: Visualise your disk usage with nested rectangles (powered by `squarify`).
 *   **📈 Resource Charts**: View top folders and distribution of file types via Matplotlib.
-*   **👯 Duplicate Finder**: Locate redundant files using fast XXHash-based comparison.
+*   **👯 Duplicate Finder**: Locate redundant copies in the same directory using smart filename normalisation (e.g., matching `report (1).pdf` to `report.pdf`).
 *   **🗑️ Safe Deletion**: Integrated with `send2trash` to move files to the Recycle Bin rather than permanent deletion.
 *   **🛡️ Safety First**: Hardcoded "Safe Scan" areas and a robust blocklist to prevent accidental modification of system files.
 
@@ -83,22 +83,23 @@ The scanner (`src/scanner.py`) includes a hardcoded blocklist of system-critical
 
 ## 🏗️ Technical Architecture
 
-DiskLens is designed for speed and safety. Here is how the core components interact:
+DiskLens is designed for speed, safety, and maintainability. Here is how the core components interact:
 
 ### 1. Multi-threaded Scanner (`src/scanner.py`)
 The scanner uses a `ThreadPoolExecutor` to perform parallel directory traversal. It utilizes `os.scandir()` for high-performance file discovery and applies safety filters *before* descending into any directory or calling `stat()` on a file.
 
-### 2. Fast Duplicate Identification (`src/duplicates.py`)
-Duplicates are found in two stages:
-1.  **Size Matching**: Files with identical sizes are grouped.
-2.  **Hash Verification**: Only files with matching sizes are hashed using `xxhash` (a fast non-cryptographic hash) to confirm identity.
+### 2. Smart Duplicate Identification (`src/duplicates.py`)
+Instead of heavy file hashing, DiskLens uses regex-based normalisation to identify duplicates in the same directory. It identifies Windows-style copy patterns like `filename (1).ext` or `filename - Copy.ext` and groups them with the original file.
 
-### 3. Visualisation Layer (`src/views/`)
+### 3. Centralised Service Layer (`src/actions.py`)
+File system modifications (like deletion) are isolated from the UI views. All deletion requests pass through a centralised `actions.py` service, which handles path normalisation and error reporting.
+
+### 4. Unified Styling (`src/theme.py`)
+Visual consistency is managed through a central theme module. All fonts, colors, and layout constants are defined in one place, allowing for easy UI adjustments and potential future theming.
+
+### 5. Visualisation Layer (`src/views/`)
 *   **Treemap**: Uses the `squarify` algorithm to map file sizes to visual area.
 *   **Charts**: Leverages `matplotlib` for generating high-quality bar and pie charts of your data.
-
-### 4. Safe Deletion Logic
-Deletion requests are passed to `send2trash`, ensuring that nothing is permanently deleted without a second chance via the Windows Recycle Bin.
 
 ---
 

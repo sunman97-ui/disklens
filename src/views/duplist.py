@@ -4,7 +4,8 @@ import os
 from datetime import datetime
 import tkinter as tk
 from tkinter import ttk, messagebox
-import send2trash
+from actions import delete_to_trash
+import theme
 
 
 def _fmt(n):
@@ -21,22 +22,17 @@ def _date(path):
         return ""
 
 
-def _winpath(p: str) -> str:
-    """Normalise to Windows backslash path so send2trash never sees forward slashes."""
-    return os.path.normpath(p)
-
-
 class DupListView(ttk.Frame):
     def __init__(self, parent, **kw):
         super().__init__(parent, **kw)
 
-        tb = ttk.Frame(self); tb.pack(fill="x", padx=4, pady=4)
+        tb = ttk.Frame(self); tb.pack(fill="x", padx=theme.PAD_SMALL, pady=theme.PAD_SMALL)
         ttk.Button(tb, text="Delete selected (Recycle Bin)",
                    command=self._del).pack(side="left")
         ttk.Button(tb, text="Select all copies",
-                   command=self._sel_copies).pack(side="left", padx=6)
+                   command=self._sel_copies).pack(side="left", padx=theme.PAD_NORMAL)
         self._sv = tk.StringVar(value="Run a duplicate scan first.")
-        ttk.Label(tb, textvariable=self._sv).pack(side="left", padx=12)
+        ttk.Label(tb, textvariable=self._sv).pack(side="left", padx=theme.PAD_LARGE)
 
         cols = ("role", "name", "path", "size", "date", "group")
         self.tree = ttk.Treeview(self, columns=cols, show="headings",
@@ -56,8 +52,8 @@ class DupListView(ttk.Frame):
         self.tree.column("date",  width=140, anchor="center", stretch=False)
         self.tree.column("group", width=55,  anchor="center", stretch=False)
 
-        self.tree.tag_configure("original", background="#eaf3de")
-        self.tree.tag_configure("copy",     background="#ffffff")
+        self.tree.tag_configure("original", background=theme.COLOR_ORIGINAL_BG)
+        self.tree.tag_configure("copy",     background=theme.COLOR_COPY_BG)
 
         sb = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=sb.set)
@@ -84,7 +80,7 @@ class DupListView(ttk.Frame):
                 self.tree.insert("", "end", tags=(role,), values=(
                     role,
                     os.path.basename(p),
-                    _winpath(p),
+                    p,
                     _fmt(os.path.getsize(p)) if os.path.exists(p) else "?",
                     _date(p),
                     str(gi),
@@ -105,17 +101,19 @@ class DupListView(ttk.Frame):
     def _del(self):
         sel = self.tree.selection()
         if not sel: return
-        paths = [_winpath(self.tree.item(s)["values"][2]) for s in sel]
+        paths = [self.tree.item(s)["values"][2] for s in sel]
         if not messagebox.askyesno(
             "Confirm", f"Send {len(paths)} file(s) to Recycle Bin?"
         ): return
         errs = []
         for p in paths:
-            try:
-                send2trash.send2trash(p)
-            except Exception as e:
-                errs.append(f"{os.path.basename(p)}: {e}")
+            success, msg = delete_to_trash(p)
+            if not success:
+                errs.append(f"{os.path.basename(p)}: {msg}")
+        
+        # Refresh tree - simpler to just delete selected items from view
         for iid in sel:
             self.tree.delete(iid)
+            
         if errs:
             messagebox.showerror("Errors", "\n".join(errs))
