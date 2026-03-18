@@ -172,8 +172,10 @@ class App(tk.Tk):
 
         def run() -> None:
             assert self._path is not None
+
             def progress_cb(p: str) -> None:
                 self._sv.set(f"  {p[-70:]}")
+
             node = scan(
                 self._path,
                 progress_cb=progress_cb,
@@ -203,7 +205,7 @@ class App(tk.Tk):
         ch = self._data["root"]["children"]
         self._tm.load(ch)  # type: ignore[no-untyped-call]
         self._bc.load(ch)  # type: ignore[no-untyped-call]
-        self._tc.load(self._data["files"])  
+        self._tc.load(self._data["files"])
         self._ll.load(self._data["files"])
         total = float(self._data["root"]["size"])
         count = len(self._data["files"])
@@ -217,17 +219,23 @@ class App(tk.Tk):
 
         def run() -> None:
             assert self._path is not None
+
             def progress_cb(p: str) -> None:
                 self._sv.set(f"  checking {p[-60:]}")
+
             groups = find_duplicates(
                 self._path,
                 progress_cb=progress_cb,
             )
+
             def load_done() -> None:
                 self._dl.load(groups)
+
             self.after(0, load_done)
+
             def set_done() -> None:
                 self._sv.set(f"Done - {len(groups)} duplicate groups found")
+
             self.after(0, set_done)
 
         threading.Thread(target=run, daemon=True).start()
