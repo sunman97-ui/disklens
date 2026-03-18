@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from pathlib import Path
 from tkinter import ttk
+from typing import Any
 
 import matplotlib
 
@@ -58,8 +59,8 @@ class TypeChartView(ttk.Frame):
         c.get_tk_widget().pack(fill="both", expand=True)
         self._c = c
 
-    def load(self, file_list):
-        by_ext = defaultdict(int)
+    def load(self, file_list: list[dict[str, Any]]) -> None:
+        by_ext: defaultdict[str, int] = defaultdict(int)
         for f in file_list:
             ext = Path(f["path"]).suffix.lower() or "(none)"
             by_ext[ext] += f["size"]

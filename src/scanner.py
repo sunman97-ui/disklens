@@ -17,6 +17,7 @@ import threading
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
+from os import DirEntry
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -104,7 +105,7 @@ def _is_blocked_path(path: str) -> bool:
     return any(seg in low for seg in _BLOCKED_PATH_SEGMENTS)
 
 
-def _is_safe_entry(entry: os.DirEntry, root: str) -> bool:
+def _is_safe_entry(entry: DirEntry[str], root: str) -> bool:
     """Return True if this entry is safe to include / descend into."""
     try:
         # Never follow reparse points (symlinks, junctions, mount points)
