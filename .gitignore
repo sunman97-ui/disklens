@@ -30,3 +30,9 @@ Thumbs.db
 
 # Skill Creator artifacts
 skills/*.skill
+
+# Coverage
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
